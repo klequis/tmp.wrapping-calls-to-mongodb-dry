@@ -6,7 +6,7 @@ const MongoClient = mongodb.MongoClient
 
 let client
 
-export const connectDB = async () => {
+const connectDB = async () => {
   if (!client) {
     client = await MongoClient.connect(config.mongoUrl, {
       useNewUrlParser: true
@@ -97,7 +97,6 @@ export const find = async (collection, filter = {}, project = {}) => {
   try {
     const { db } = await connectDB()
     const ret = await db.collection(collection).find(filter).project(project).toArray()
-    console.log('ret', ret)
     return formatReturnSuccess(ret)
   }
   catch (e) {
@@ -105,3 +104,65 @@ export const find = async (collection, filter = {}, project = {}) => {
     return formatReturnError(e)
   }
 }
+
+/**
+ * 
+ * @param {string} collection the name of a collection
+ * @param {string} id a valid _id as string
+ * @param {object} project a valid projection
+ */
+export const findById = async (collection, id, project = {}) => {
+  try {
+    const { db } = await connectDB()
+    const ret = await db.collection(collection).find({ _id: ObjectID(id) }).project(project).toArray()
+    return formatReturnSuccess(ret)
+  }
+  catch (e) {
+    logError('findById', e)
+    return formatReturnError(e)
+  }
+}
+
+/**
+ * 
+ * @param {string} collection the name of a collection
+ * @param {string} id a valid _id as string
+ */
+export const findOneAndDelete = async (collection, id) => {
+  try {
+    const { db } = await connectDB()
+    const ret = await db.collection(collection).findOneAndDelete({ _id: ObjectID(id) })
+    return formatReturnSuccess(ret.value)
+  }
+  catch (e) {
+    logError('findOneAndDelete', e)
+    return formatReturnError(e)
+  }
+}
+
+/**
+ * 
+ * @param {string} collection the name of a collection
+ * @param {string} id a valid _id as string
+ * @param {object} update document properties to be updated such as { title: 'new title', completed: true }
+ * @param {boolean} returnOriginal if true, returns the original document instead of the updated one
+ */
+export const findOneAndUpdate = async (collection, id, update, returnOriginal = false) => {
+  try {
+
+    // if the filter has the _id prop, remove it
+    const cleanedUpdate = removeIdProp(update)
+    const { db } = await connectDB()
+    const ret = await db.collection(collection).findOneAndUpdate(
+      { _id: ObjectID(id) },
+      { $set: cleanedUpdate },
+      { returnOriginal: returnOriginal }
+    )
+    return formatReturnSuccess(ret.value)
+  }
+  catch (e) {
+    console.warn('ERROR: dbFunctions.findOneAndUpdate', e)
+    return formatReturnError(e)
+  }
+}
+
